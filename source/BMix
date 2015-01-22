@@ -19,7 +19,7 @@
 start=`date +%s`
 
 # load matlab module
-module load matlab/R2013a
+# module load matlab/R2013a
 
 # Load all the necessary variables
 source $1

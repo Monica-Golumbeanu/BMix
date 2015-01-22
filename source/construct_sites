@@ -10,9 +10,9 @@ CONFIDENCE_PER=$4
 BAM_FILE=$5
 
 ## Extract the PAR-CLIP TCs
-awk -v perc=$CONFIDENCE_PER '{if(NR>1 && $5==3 && $6>perc) {print $1 "\t" $2 "\t" $2+1 "\t" $5 "\t" $6 "\t" "+"} }' $tc_folder"TC_f.results" > $tc_folder"TC_f.parclip.bed"
+gawk -v perc=$CONFIDENCE_PER '{if(NR>1 && $5==3 && $6>perc) {print $1 "\t" $2 "\t" $2+1 "\t" $5 "\t" $6 "\t" "+"} }' $tc_folder"TC_f.results" > $tc_folder"TC_f.parclip.bed"
 
-awk -v perc=$CONFIDENCE_PER '{if(NR>1 && $5==3 && $6>perc) {print $1 "\t" $2 "\t" $2+1 "\t" $5 "\t" $6 "\t" "-"} }' $tc_folder"AG_r.results" > $tc_folder"AG_r.parclip.bed"
+gawk -v perc=$CONFIDENCE_PER '{if(NR>1 && $5==3 && $6>perc) {print $1 "\t" $2 "\t" $2+1 "\t" $5 "\t" $6 "\t" "-"} }' $tc_folder"AG_r.results" > $tc_folder"AG_r.parclip.bed"
 
 
 ## Obtain the reads intersecting with the PAR-CLIP TCs
@@ -29,9 +29,9 @@ mkdir $group_folder
 echo $group_folder " created"
 fi
 group_file_f=$group_folder$"Sites_f.txt"
-awk -v refine_cov=$REFINE_COV -v output_file=$group_file_f -f sExtract_sites $tc_folder"TC_f.parclip.reads.bed"
+gawk -v refine_cov=$REFINE_COV -v output_file=$group_file_f -f sExtract_sites $tc_folder"TC_f.parclip.reads.bed"
 group_file_r=$group_folder$"Sites_r.txt"
-awk -v refine_cov=$REFINE_COV -v output_file=$group_file_r -f sExtract_sites $tc_folder"AG_r.parclip.reads.bed"
+gawk -v refine_cov=$REFINE_COV -v output_file=$group_file_r -f sExtract_sites $tc_folder"AG_r.parclip.reads.bed"
 
 
 ## Report all the binding sites for the entire genome
