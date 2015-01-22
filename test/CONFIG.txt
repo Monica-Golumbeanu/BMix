@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# Path to the input .bam file
+BAM_FILE="../test/data/AGO2_reads_chr21.bam"
+
+# Path to the fasta file containing the reference genome (the same as the one used for alignment)
+REF_FILE="../test/data/hg19_chr21.fa"
+
+# Chosen name for the experiment (the produced files will contain this name)
+SAMPLE_NAME="test"
+
+# Path of the folder where the output will be saved (a new folder will be created if it does not exist already)
+WORK_FOLDER="../test/BMix_output/"
+
+# Minimum coverage to consider (default is 5)
+COV_MIN=5
+
+# The tails of the binding sites with coverage lower than this value will be trimmed (default is 1)
+REFINE_COV=1
+
+# threshold for the posterior probability used to classify substitutions (default is 0.95)
+CONFIDENCE_PER=0.95
+
