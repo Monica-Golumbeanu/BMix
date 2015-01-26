@@ -1,7 +1,7 @@
 BMix is a toolbox for analysing PAR-CLIP data and detecting T-to-C substitutions induced following RNA-protein cross-linking. Candidate binding sites are reported starting from the identified T-to-C substitutions.
 
 The toolbox is presented in the manuscript:
-Monica Golumbeanu, Pejman Mohammadi and Niko Beerenwinkel.(2015) Probabilistic modeling of occurring mutations in PAR-CLIP data
+Monica Golumbeanu, Pejman Mohammadi and Niko Beerenwinkel.(2015) Probabilistic modeling of occurring substitutions in PAR-CLIP data
 
 Contact: monica.golumbeanu@bsse.ethz.ch
 
