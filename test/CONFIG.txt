@@ -18,6 +18,9 @@ COV_MIN=5
 # The tails of the binding sites with coverage lower than this value will be trimmed (default is 1)
 REFINE_COV=1
 
-# threshold for the posterior probability used to classify substitutions (default is 0.95)
+# Threshold for the posterior probability used to classify substitutions (default is 0.95)
 CONFIDENCE_PER=0.95
+
+# Indicator variable which tells BMix to learn the parameters of the model independently for both strands (1), or not (0)
+SEPARATE_STRANDS=1 
 

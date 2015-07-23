@@ -1,0 +1,42 @@
+#!/bin/sh
+#
+# Written by Monica Golumbeanu
+# monica.golumbeanu@bsse.ethz.ch
+#
+tc_folder=$1
+WORK_FOLDER=$2
+REFINE_COV=$3
+CONFIDENCE_PER=$4
+BAM_FILE=$5
+
+## Extract the PAR-CLIP TCs
+gawk -v perc=$CONFIDENCE_PER '{if(NR>1 && $5==3 && $6>perc) {print $1 "\t" $2 "\t" $2+1 "\t" $5 "\t" $6 "\t" "+"} }' $tc_folder"TC_f.results" > $tc_folder"TC_f.parclip.bed"
+
+gawk -v perc=$CONFIDENCE_PER '{if(NR>1 && $5==3 && $6>perc) {print $1 "\t" $2 "\t" $2+1 "\t" $5 "\t" $6 "\t" "-"} }' $tc_folder"AG_r.results" > $tc_folder"AG_r.parclip.bed"
+
+
+## Obtain the reads intersecting with the PAR-CLIP TCs
+echo "Forming read groups ..."
+bedtools intersect -abam $BAM_FILE -b $tc_folder"TC_f.parclip.bed" -s -bed > $tc_folder"TC_f.parclip.reads.bed"
+bedtools intersect -abam $BAM_FILE -b $tc_folder"AG_r.parclip.bed" -s -bed > $tc_folder"AG_r.parclip.reads.bed"
+
+
+## Merge the reads into binding sites
+echo "Reporting binding sites ..."
+group_folder=$WORK_FOLDER"BindingSites/"
+if [ ! -d $group_folder ]; then
+mkdir $group_folder
+echo $group_folder " created"
+fi
+group_file_f=$group_folder$"Sites_f.txt"
+gawk -v refine_cov=$REFINE_COV -v output_file=$group_file_f -f sExtract_sites $tc_folder"TC_f.parclip.reads.bed"
+group_file_r=$group_folder$"Sites_r.txt"
+gawk -v refine_cov=$REFINE_COV -v output_file=$group_file_r -f sExtract_sites $tc_folder"AG_r.parclip.reads.bed"
+
+
+## Report all the binding sites for the entire genome
+final_file=$group_folder$"Sites.bed"
+cat $group_file_f $group_file_r > $final_file
+final_file_sorted=$group_folder$"Sites_sorted.bed"
+sort -k1,1 -k2,2n $final_file > $final_file_sorted
+rm $final_file

@@ -1,0 +1,95 @@
+#!/bin/bash
+#########################
+# script BMix - contains the entire preprocessing pipeline
+#
+# input in a config file:
+#        bam_file - full path of the sorted alignment file in .bam format
+#        ref_file - full path of the .fasta file corresponding to the reference genome
+#        sample_name - name of the sample
+#        work_folder - full path of the folder where the result files should be stored
+#        cov_min - minimum coverage
+#        refine_cov - minimum coverage of the binding site boundaries
+#        separate_strands - indicates if the strands are considered separately or not for learning parameters
+#
+# example of use: ./BMix CONFIG.txt
+#
+# Written by Monica Golumbeanu
+# monica.golumbeanu@bsse.ethz.ch
+#########################
+
+start=`date +%s`
+
+# Load all the necessary variables
+source $1
+
+# Create the work folder if not existent
+if [ ! -d $WORK_FOLDER ]; then
+    mkdir $WORK_FOLDER
+    echo $WORK_FOLDER " created"
+fi
+
+## Construct the mpileup file
+echo "Constructing mpileup file ..."
+mpileup_file=$WORK_FOLDER$SAMPLE_NAME".mpileup"
+samtools mpileup -ABQ0 -d10000000 -f $REF_FILE $BAM_FILE > $mpileup_file 2> "/dev/null"
+
+
+## Extract the mismatch information
+echo "Extracting mismatch information ..."
+mismatch_folder=$WORK_FOLDER"MismSummaries/"
+# Create the mismatch summary folder if not existent
+if [ ! -d $mismatch_folder ]; then
+    mkdir $mismatch_folder
+    echo $mismatch_folder " created"
+fi
+gawk -v cov_min=$COV_MIN -v path=$mismatch_folder -f extract_mism $mpileup_file
+
+
+## Apply the model and classify the TCs
+echo "Classifying mismatches"
+tc_folder=$WORK_FOLDER"TC_Results/"
+if [ ! -d $tc_folder ]; then
+    mkdir $tc_folder
+    echo $tc_folder " created"
+fi
+#R_path=`pwd`
+echo "Executing Rscript"
+Rscript BMix.R $mismatch_folder $tc_folder $COV_MIN $CONFIDENCE_PER $SEPARATE_STRANDS
+
+## Extract the PAR-CLIP TCs
+gawk -v perc=$CONFIDENCE_PER '{if(NR>1 && $5==3 && $6>perc) {print $1 "\t" $2 "\t" $2+1 "\t" $5 "\t" $6 "\t" "+"} }' $tc_folder"TC_f.results" > $tc_folder"TC_f.parclip.bed"
+
+gawk -v perc=$CONFIDENCE_PER '{if(NR>1 && $5==3 && $6>perc) {print $1 "\t" $2 "\t" $2+1 "\t" $5 "\t" $6 "\t" "-"} }' $tc_folder"AG_r.results" > $tc_folder"AG_r.parclip.bed"
+
+
+## Obtain the reads intersecting with the PAR-CLIP TCs
+echo "Forming read groups ..."
+bedtools intersect -abam $BAM_FILE -b $tc_folder"TC_f.parclip.bed" -s -bed > $tc_folder"TC_f.parclip.reads.bed"
+bedtools intersect -abam $BAM_FILE -b $tc_folder"AG_r.parclip.bed" -s -bed > $tc_folder"AG_r.parclip.reads.bed"
+
+
+## Merge the reads into binding sites
+echo "Reporting binding sites ..."
+group_folder=$WORK_FOLDER"BindingSites/"
+if [ ! -d $group_folder ]; then
+    mkdir $group_folder
+    echo $group_folder " created"
+fi
+group_file_f=$group_folder$"Sites_f.txt"
+gawk -F"\t" -v refine_cov=$REFINE_COV -v output_file=$group_file_f -f extract_sites $tc_folder"TC_f.parclip.reads.bed"
+group_file_r=$group_folder$"Sites_r.txt"
+gawk -F"\t" -v refine_cov=$REFINE_COV -v output_file=$group_file_r -f extract_sites $tc_folder"AG_r.parclip.reads.bed"
+
+
+## Report all the binding sites for the entire genome
+final_file=$group_folder$"Sites.bed"
+cat $group_file_f $group_file_r > $final_file
+final_file_sorted=$group_folder$"Sites_sorted.bed"
+sort -k1,1 -k2,2n $final_file > $final_file_sorted
+rm $final_file
+
+
+## Write execution time to the log file
+end=`date +%s`
+runtime=$((end-start))
+echo "Total execution time (s): " $runtime > $WORK_FOLDER"Log.txt"

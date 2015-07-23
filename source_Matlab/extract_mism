@@ -1,0 +1,125 @@
+#!/bin/bash
+################################
+#
+# script extract_mism: starting from a .pileup file created with samtools mpileup it extracts mismatch information;
+#                   it creates 12 files corresponding to the possible mismatches on two strands
+#
+# Written by Monica Golumbeanu
+# monica.golumbeanu@bsse.ethz.ch
+#################################
+
+BEGIN {
+print "#Chr" "\t" "Position" "\t" "X" "\t" "Y" > (path"TC_f.txt")
+print "#chr" "\t" "0" "\t" "0" "\t" "0" >> (path"TC_f.txt")
+
+print "#Chr" "\t" "Position" "\t" "X" "\t" "Y" > (path"AC_f.txt")
+print "#chr" "\t" "0" "\t" "0" "\t" "0" >> (path"AC_f.txt")
+
+print "#Chr" "\t" "Position" "\t" "X" "\t" "Y" > (path"GC_f.txt")
+print "#chr" "\t" "0" "\t" "0" "\t" "0" >> (path"GC_f.txt")
+
+print "#Chr" "\t" "Position" "\t" "X" "\t" "Y" > (path"AG_r.txt")
+print "#chr" "\t" "0" "\t" "0" "\t" "0" >> (path"AG_r.txt")
+
+print "#Chr" "\t" "Position" "\t" "X" "\t" "Y" > (path"TG_r.txt")
+print "#chr" "\t" "0" "\t" "0" "\t" "0" >> (path"TG_r.txt")
+
+print "#Chr" "\t" "Position" "\t" "X" "\t" "Y" > (path"CG_r.txt")
+print "#chr" "\t" "0" "\t" "0" "\t" "0" >> (path"CG_r.txt")
+
+print "Output mismatch summary files opened in " path
+}
+
+{
+######## EXTRACT THE READ SEQUENCE #######
+read_seq=$5
+# replace the end of read marker
+gsub(/\$/,"",read_seq);
+# replace the start of read marker
+gsub(/\^./,"",read_seq);
+
+# remove the insertion markers
+while (index(read_seq,"+")>0) {
+    pos = index(read_seq,"+")
+    first_part = substr(read_seq, 1, pos-1)
+    second_part = substr(read_seq, pos+1)
+    nb = ""
+    # extract the number of inserted nucleotides
+    while (substr(second_part,1,1) ~ /^[0-9]+$/) {
+        nb = nb "" substr(second_part,1,1)
+        second_part = substr(second_part,2)
+    }
+    # remove the insterted nucleotides
+    read_seq = first_part "" substr(second_part,nb+1)
+}
+
+# remove the deletion markers
+while (index(read_seq,"-")>0) {
+    pos = index(read_seq,"-")
+    first_part = substr(read_seq, 1, pos-1)
+    second_part = substr(read_seq, pos+1)
+    nb = ""
+    # extract the number of deleted characters
+    while (substr(second_part,1,1) ~ /^[0-9]+$/) {
+        nb = nb "" substr(second_part,1,1)
+        second_part = substr(second_part,2)
+    }
+    # remove the deleted nucleotides
+    read_seq = first_part "" substr(second_part,nb+1)
+}
+
+####### EXTRACT THE MISMATCH PROFILE ######
+matches_f = gsub("\\.","-",read_seq)
+matches_r = gsub(",",",",read_seq)
+
+nb_A = gsub("A","A",read_seq)
+nb_C = gsub("C","C",read_seq)
+nb_G = gsub("G","G",read_seq)
+nb_T = gsub("T","T",read_seq)
+nb_N = gsub("N","N",read_seq)
+nb_a = gsub("a","a",read_seq)
+nb_c = gsub("c","c",read_seq)
+nb_g = gsub("g","g",read_seq)
+nb_t = gsub("t","t",read_seq)
+nb_n = gsub("n","n",read_seq)
+
+cov_f = matches_f + nb_A + nb_C + nb_G + nb_T + nb_N
+cov_r = matches_r + nb_a + nb_c + nb_g + nb_t + nb_n
+
+####### PRINT TO THE FILES #######
+# for the forward strand
+if (cov_f>=cov_min) {
+    if ($3 == "A" || $3 == "a") {
+        print $1 "\t" $2 "\t" nb_C "\t" cov_f >> (path"AC_f.txt")
+    }
+    else if ($3 == "G" || $3 == "g") {
+        print $1 "\t" $2 "\t" nb_C "\t" cov_f >> (path"GC_f.txt")
+    }
+    else if ($3 == "T" || $3 == "t") {
+        print $1 "\t" $2 "\t" nb_C "\t" cov_f >> (path"TC_f.txt")
+    }
+}
+
+# for the reverse strand
+if (cov_r>=cov_min) {
+    if ($3 == "A" || $3 == "a") {
+        print $1 "\t" $2 "\t" nb_g "\t" cov_r >> (path"AG_r.txt")
+    }
+    else if ($3 == "C" || $3 == "c") {
+        print $1 "\t" $2 "\t" nb_g "\t" cov_r >> (path"CG_r.txt")
+    }
+    else if ($3 == "T" || $3 == "t") {
+        print $1 "\t" $2 "\t" nb_g "\t" cov_r >> (path"TG_r.txt")
+    }
+}
+
+}
+END {
+# close all the files
+close(path"AC_f.txt")
+close(path"GC_f.txt")
+close(path"TC_f.txt")
+close(path"AG_r.txt")
+close(path"CG_r.txt")
+close(path"TG_r.txt")
+}
